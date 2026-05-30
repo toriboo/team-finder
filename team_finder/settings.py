@@ -11,19 +11,22 @@ DEBUG = config("DJANGO_DEBUG", default=False, cast=bool)
 
 ALLOWED_HOSTS = []
 
-
 # Application definition
 
 INSTALLED_APPS = [
+    "users.apps.UsersConfig",
+    "projects.apps.ProjectsConfig",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
-    "django.contrib.staticfiles",
-]
+    "django.contrib.staticfiles"
 
+]
+AUTH_USER_MODEL = 'users.User'
 MIDDLEWARE = [
+
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -66,6 +69,10 @@ DATABASES = {
         "PORT": config("POSTGRES_PORT", default=5432, cast=int),
     }
 }
+
+LOGIN_URL = '/users/login/'
+LOGIN_REDIRECT_URL = '/projects/list/'
+LOGOUT_REDIRECT_URL = '/projects/list/'
 
 
 # Password validation
@@ -116,3 +123,5 @@ MEDIA_ROOT = BASE_DIR / "media"
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+env_path = BASE_DIR.parent / '.env'
