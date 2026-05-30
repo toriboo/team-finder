@@ -1,35 +1,38 @@
 from django.db import models
 from django.conf import settings
 
+
 class Project(models.Model):
     STATUS_CHOICES = [
-        ('open', 'Открыт'),
-        ('closed', 'Закрыт'),
+        ("open", "Открыт"),
+        ("closed", "Закрыт"),
     ]
 
-    name = models.CharField(max_length=200, verbose_name='Название')
-    description = models.TextField(blank=True, verbose_name='Описание')
+    name = models.CharField(max_length=200, verbose_name="Название")
+    description = models.TextField(blank=True, verbose_name="Описание")
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
-        related_name='owned_projects',
-        verbose_name='Автор'
+        related_name="owned_projects",
+        verbose_name="Автор",
     )
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата создания')
-    github_url = models.URLField(blank=True, verbose_name='Ссылка на GitHub')
-    status = models.CharField(max_length=6, choices=STATUS_CHOICES, default='open', verbose_name='Статус')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
+    github_url = models.URLField(blank=True, verbose_name="Ссылка на GitHub")
+    status = models.CharField(
+        max_length=6, choices=STATUS_CHOICES, default="open", verbose_name="Статус"
+    )
     participants = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
-        related_name='participated_projects',
+        related_name="participated_projects",
         blank=True,
-        verbose_name='Участники'
+        verbose_name="Участники",
     )
 
     class Meta:
-        verbose_name = 'Проект'
-        verbose_name_plural = 'Проекты'
-        ordering = ['-created_at']   # сортировка по дате создания проекта
+        verbose_name = "Проект"
+        verbose_name_plural = "Проекты"
+        ordering = ["-created_at"]  # сортировка по дате создания проекта
 
     def __str__(self):
         return self.name

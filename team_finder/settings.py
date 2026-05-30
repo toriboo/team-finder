@@ -21,12 +21,10 @@ INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
-    "django.contrib.staticfiles"
-
+    "django.contrib.staticfiles",
 ]
-AUTH_USER_MODEL = 'users.User'
+AUTH_USER_MODEL = "users.User"
 MIDDLEWARE = [
-
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -70,9 +68,9 @@ DATABASES = {
     }
 }
 
-LOGIN_URL = '/users/login/'
-LOGIN_REDIRECT_URL = '/projects/list/'
-LOGOUT_REDIRECT_URL = '/projects/list/'
+LOGIN_URL = "/users/login/"
+LOGIN_REDIRECT_URL = "/projects/list/"
+LOGOUT_REDIRECT_URL = "/projects/list/"
 
 
 # Password validation
@@ -124,4 +122,4 @@ MEDIA_ROOT = BASE_DIR / "media"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-env_path = BASE_DIR.parent / '.env'
+env_path = BASE_DIR.parent / ".env"
