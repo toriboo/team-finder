@@ -39,22 +39,24 @@
         </div>
 
         <div class="project-card-body">
-                <h2 class="project-title">{{ project.name }}</h2>
-                <p class="project-description">{{ project.description }}</p>
+            <h2 class="project-title">{{ project.name }}</h2>
+            <p class="project-description">{{ project.description }}</p>
 
-                {% if project.github_url %}
-                <p class="project-link">
-                    {% include 'includes/svg/github.html' %}
-                    <a href="{{ project.github_url }}" target="_blank">Репозиторий на GitHub</a>
-                </p>
-                {% endif %}
+            {% if project.github_url %}
+            <p class="project-link">
+                {% include 'includes/svg/github.html' %}
+                <a href="{{ project.github_url }}" target="_blank">Репозиторий на GitHub</a>
+            </p>
+            {% endif %}
         </div>
+
         <div class="project-actions">
             <a href="#"
                class="black-button black-button-share share-button"
                data-url="/projects/{{ project.id }}">
                 {% include 'includes/svg/share.html' %}
             </a>
+
             {% if user.id == project.owner.id %}
                 <a href="/projects/{{ project.id }}/edit" class="black-button">
                     {% include 'includes/svg/pen.html' %}
@@ -66,7 +68,8 @@
                     </button>
                 {% endif %}
             {% else %}
-                {% if user.is_authenticated %}
+                {# Показываем кнопку участия только для открытых проектов #}
+                {% if user.is_authenticated and project.status == 'open' %}
                     <button id="participate-btn" class="black-button"
                             data-project="{{ project.id }}"
                             data-user-id="{{ request.user.id }}"
@@ -79,34 +82,35 @@
                             Участвовать
                         {% endif %}
                     </button>
+                {% elif project.status == 'closed' %}
+                    <p class="closed-message" style="margin: 0; color: #666;">Проект закрыт, набор участников не ведётся.</p>
                 {% endif %}
             {% endif %}
         </div>
-
     </div>
 
     <div class="project-participants-card">
-    <h3>Участники проекта (<span id="participants-count" style="display:inline">{{ project.participants.all|length }}</span>)</h3>
-    <div id="participants-list" class="participants-list">
-        {% for member in project.participants.all %}
-        <a href="/users/{{ member.id }}" id="participant-{{ member.id }}">
-            <div class="participant-item">
-                {% if member.avatar %}
-                    <img src="{{ member.avatar.url }}" alt="Аватар" class="participant-avatar">
-                {% else %}
-                    <img src="{% static 'images/default-avatar.png' %}" alt="Аватар по умолчанию" class="participant-avatar">
-                {% endif %}
-                <div class="participant-info">
-                    <span class="participant-name">{{ member.name }} {{ member.surname }}</span>
-                    <span class="participant-role">
-                        {% if member.id == project.owner.id %}Автор проекта{% else %}Участник{% endif %}
-                    </span>
+        <h3>Участники проекта (<span id="participants-count" style="display:inline">{{ project.participants.all|length }}</span>)</h3>
+        <div id="participants-list" class="participants-list">
+            {% for member in project.participants.all %}
+            <a href="/users/{{ member.id }}" id="participant-{{ member.id }}">
+                <div class="participant-item">
+                    {% if member.avatar %}
+                        <img src="{{ member.avatar.url }}" alt="Аватар" class="participant-avatar">
+                    {% else %}
+                        <img src="{% static 'images/default-avatar.png' %}" alt="Аватар по умолчанию" class="participant-avatar">
+                    {% endif %}
+                    <div class="participant-info">
+                        <span class="participant-name">{{ member.name }} {{ member.surname }}</span>
+                        <span class="participant-role">
+                            {% if member.id == project.owner.id %}Автор проекта{% else %}Участник{% endif %}
+                        </span>
+                    </div>
                 </div>
-            </div>
-        </a>
-        {% empty %}
-        <p id="no-participants">Пока нет участников</p>
-        {% endfor %}
+            </a>
+            {% empty %}
+            <p id="no-participants">Пока нет участников</p>
+            {% endfor %}
         </div>
     </div>
 </div>
