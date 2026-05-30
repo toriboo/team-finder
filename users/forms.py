@@ -1,7 +1,8 @@
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm, PasswordChangeForm
-from django.contrib.auth import authenticate  # <-- добавьте эту строку
+from django.contrib.auth import authenticate
 from django.core.exceptions import ValidationError
+
 from .models import User
 
 
@@ -26,7 +27,6 @@ class LoginForm(AuthenticationForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Удаляем стандартное поле username
         if "username" in self.fields:
             del self.fields["username"]
 
@@ -34,7 +34,6 @@ class LoginForm(AuthenticationForm):
         email = self.cleaned_data.get("email")
         password = self.cleaned_data.get("password")
         if email is not None and password:
-            # Теперь authenticate импортирован
             self.user_cache = authenticate(self.request, email=email, password=password)
             if self.user_cache is None:
                 raise self.get_invalid_login_error()
@@ -68,5 +67,4 @@ class UserEditForm(forms.ModelForm):
         return url
 
 
-class ChangePasswordForm(PasswordChangeForm):
-    pass
+# Класс ChangePasswordForm УДАЛЁН — используем PasswordChangeForm напрямую

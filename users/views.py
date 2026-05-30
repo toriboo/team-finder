@@ -1,14 +1,21 @@
+import json
+from http import HTTPStatus
+
 from django.contrib.auth import login, logout, update_session_auth_hash
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.core.paginator import Paginator
-from django.db.models import Q
+from django.contrib.auth.forms import PasswordChangeForm  # вместо ChangePasswordForm
 from django.http import JsonResponse
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import redirect, reverse
 from django.urls import reverse_lazy
 from django.views import View
 from django.views.generic import CreateView, UpdateView, DetailView, ListView, FormView
-from .forms import RegisterForm, LoginForm, UserEditForm, ChangePasswordForm
+
+from .forms import RegisterForm, LoginForm, UserEditForm
 from .models import User, Skill
+
+# Константы на уровне модуля
+USERS_PER_PAGE = 12
+SKILL_AUTOCOMPLETE_LIMIT = 10
 
 
 # --- Регистрация и аутентификация ---
@@ -40,7 +47,7 @@ class LogoutView(View):
 
 
 class ChangePasswordView(LoginRequiredMixin, FormView):
-    form_class = ChangePasswordForm
+    form_class = PasswordChangeForm  # используем стандартную форму
     template_name = "users/change_password.html"
     success_url = reverse_lazy("projects:list")
 
@@ -61,11 +68,6 @@ class UserDetailView(DetailView):
     template_name = "users/user-details.html"
     context_object_name = "user"
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        # Дополнительные данные, если нужны
-        return context
-
 
 class EditProfileView(LoginRequiredMixin, UpdateView):
     model = User
@@ -77,15 +79,16 @@ class EditProfileView(LoginRequiredMixin, UpdateView):
         return self.request.user
 
     def get_success_url(self):
-        return reverse_lazy("users:user_detail", kwargs={"pk": self.request.user.pk})
+        # Используем reverse вместо reverse_lazy
+        return reverse("users:user_detail", kwargs={"pk": self.request.user.pk})
 
 
-# --- Список пользователей с фильтром по навыкам (Вариант 2) ---
+# --- Список пользователей с фильтром по навыкам ---
 class UserListView(ListView):
     model = User
     template_name = "users/participants.html"
     context_object_name = "participants"
-    paginate_by = 12
+    paginate_by = USERS_PER_PAGE  # константа
     ordering = ["id"]
 
     def get_queryset(self):
@@ -108,18 +111,18 @@ class UserListView(ListView):
         return context
 
 
-# --- API для работы с навыками (автодополнение, добавление, удаление) ---
+# --- API для работы с навыками ---
 class SkillAutocompleteView(View):
     def get(self, request):
-        q = request.GET.get("q", "")
-        if not q:
+        search_query = request.GET.get("q", "")  # осмысленное имя переменной
+        if not search_query:
             return JsonResponse([], safe=False)
-        skills = Skill.objects.filter(name__istartswith=q).order_by("name")[:10]
-        data = [{"id": s.id, "name": s.name} for s in skills]
+
+        skills = Skill.objects.filter(name__istartswith=search_query).order_by("name")[
+            :SKILL_AUTOCOMPLETE_LIMIT
+        ]
+        data = [{"id": skill.id, "name": skill.name} for skill in skills]
         return JsonResponse(data, safe=False)
-
-
-import json  # добавьте в начало файла
 
 
 class AddUserSkillView(LoginRequiredMixin, UserPassesTestMixin, View):
@@ -128,13 +131,22 @@ class AddUserSkillView(LoginRequiredMixin, UserPassesTestMixin, View):
         return self.request.user.id == user_id
 
     def post(self, request, user_id):
-        user = get_object_or_404(User, id=user_id)
+        # Проверяем существование пользователя без get_object_or_404
+        user = User.objects.filter(id=user_id).first()
+        if not user:
+            return JsonResponse(
+                {"error": "Пользователь не найден"},
+                status=HTTPStatus.NOT_FOUND,
+            )
 
-        # Парсим JSON из тела запроса
+        # Парсим JSON
         try:
             data = json.loads(request.body)
         except json.JSONDecodeError:
-            return JsonResponse({"error": "Invalid JSON"}, status=400)
+            return JsonResponse(
+                {"error": "Invalid JSON"},
+                status=HTTPStatus.BAD_REQUEST,
+            )
 
         skill_id = data.get("skill_id") or data.get("id")
         skill_name = data.get("name")
@@ -142,18 +154,32 @@ class AddUserSkillView(LoginRequiredMixin, UserPassesTestMixin, View):
         added = False
 
         if skill_id:
-            skill = get_object_or_404(Skill, id=skill_id)
+            skill = Skill.objects.filter(id=skill_id).first()
+            if not skill:
+                return JsonResponse(
+                    {"error": "Навык не найден"},
+                    status=HTTPStatus.NOT_FOUND,
+                )
         elif skill_name:
             skill, created = Skill.objects.get_or_create(name=skill_name.strip())
         else:
-            return JsonResponse({"error": "Не указан skill_id или name"}, status=400)
+            return JsonResponse(
+                {"error": "Не указан skill_id или name"},
+                status=HTTPStatus.BAD_REQUEST,
+            )
 
-        if skill not in user.skills.all():
+        # Проверяем существование навыка у пользователя через exists()
+        if not user.skills.filter(id=skill.id).exists():
             user.skills.add(skill)
             added = True
 
         return JsonResponse(
-            {"id": skill.id, "name": skill.name, "created": created, "added": added}
+            {
+                "id": skill.id,
+                "name": skill.name,
+                "created": created,
+                "added": added,
+            }
         )
 
 
@@ -163,7 +189,21 @@ class RemoveUserSkillView(LoginRequiredMixin, UserPassesTestMixin, View):
         return self.request.user.id == user_id
 
     def post(self, request, user_id, skill_id):
-        user = get_object_or_404(User, id=user_id)
-        skill = get_object_or_404(Skill, id=skill_id)
+        # Проверяем существование пользователя
+        user = User.objects.filter(id=user_id).first()
+        if not user:
+            return JsonResponse(
+                {"error": "Пользователь не найден"},
+                status=HTTPStatus.NOT_FOUND,
+            )
+
+        # Проверяем существование навыка
+        skill = Skill.objects.filter(id=skill_id).first()
+        if not skill:
+            return JsonResponse(
+                {"error": "Навык не найден"},
+                status=HTTPStatus.NOT_FOUND,
+            )
+
         user.skills.remove(skill)
         return JsonResponse({"status": "ok"})
